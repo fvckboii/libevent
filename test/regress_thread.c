@@ -510,7 +510,8 @@ note_time_cb(evutil_socket_t fd, short what, void *arg)
 static THREAD_FN
 register_events_subthread(void *arg)
 {
-	struct timeval tv = {0,0};
+	struct timeval tv  = { 0, 0 };
+	struct timeval now = { 0, 0 };
 	char b = '\0';
 
 	/* handshake */
@@ -519,20 +520,27 @@ register_events_subthread(void *arg)
 	read(subthread_pipe[1], &b, 1);
 
 	SLEEP_MS(100);
-	write(subthread_pipe[1], &b, 1);
+	evutil_gettimeofday(&now, NULL);
+	write(subthread_pipe[1], &now, sizeof(now));
 	event_active(&time_events[0], EV_TIMEOUT, 1); /* 100/100 */
 	TT_BLATHER(("activating event[0]"));
 	SLEEP_MS(100);
+	evutil_gettimeofday(&now, NULL);
+	write(subthread_pipe[1], &now, sizeof(now));
 	event_active(&time_events[1], EV_TIMEOUT, 1); /* 200/100 */
 	TT_BLATHER(("activating event[1]"));
 	SLEEP_MS(100);
 	tv.tv_usec = 100*1000;
+	evutil_gettimeofday(&now, NULL);
+	write(subthread_pipe[1], &now, sizeof(now));
 	event_add(&time_events[2], &tv); /* 400/200 */
 	TT_BLATHER(("activating event[2]"));
 	tv.tv_usec = 150*1000;
 	event_add(&time_events[3], &tv); /* 450/250 */
 	TT_BLATHER(("activating event[3]"));
-	SLEEP_MS(200);
+	SLEEP_MS(160);
+	evutil_gettimeofday(&now, NULL);
+	write(subthread_pipe[1], &now, sizeof(now));
 	event_active(&time_events[4], EV_TIMEOUT, 1); /* 500/50 */
 	TT_BLATHER(("activating event[4]"));
 
@@ -544,7 +552,7 @@ thread_no_events(void *arg)
 {
 	THREAD_T thread;
 	struct basic_test_data *data = arg;
-	struct timeval starttime, endtime;
+	struct timeval starttime, endtime, at;
 	int i;
 	char b = '\0';
 	exit_base = data->base;
@@ -577,15 +585,18 @@ thread_no_events(void *arg)
 		sec = diff.tv_sec + diff.tv_usec/1.0e6;
 		TT_BLATHER(("event %d at %.4f seconds", i, sec));
 	}
-	test_timeval_diff_eq(&starttime, &times[0], 100);
-	starttime = times[0];
-	test_timeval_diff_eq(&starttime, &times[1], 100);
-	starttime = times[1];
-	test_timeval_diff_eq(&starttime, &times[2], 200);
-	test_timeval_diff_eq(&starttime, &times[3], 250);
-	starttime = times[3];
-	test_timeval_diff_eq(&starttime, &times[4], 50);
-	test_timeval_diff_eq(&starttime, &endtime,  50);
+
+	read(subthread_pipe[0], &at, sizeof(at));
+	test_timeval_diff_eq(&at, &times[0], 0);
+	read(subthread_pipe[0], &at, sizeof(at));
+	test_timeval_diff_eq(&at, &times[1], 0);
+	read(subthread_pipe[0], &at, sizeof(at));
+	test_timeval_diff_eq(&at, &times[2], 100);
+	test_timeval_diff_eq(&at, &times[3], 150);
+	read(subthread_pipe[0], &at, sizeof(at));
+	test_timeval_diff_eq(&at, &times[4], 0);
+
+	test_timeval_diff_eq(&at, &endtime,  0);
 
 end:
 	;
