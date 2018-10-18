@@ -79,8 +79,6 @@
 #include "regress_testutils.h"
 #include "regress_thread.h"
 
-#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
-
 static int dns_ok = 0;
 static int dns_got_cancel = 0;
 static int dns_err = 0;

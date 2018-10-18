@@ -34,6 +34,8 @@ extern "C" {
 #include "tinytest.h"
 #include "tinytest_macros.h"
 
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+
 extern struct testcase_t main_testcases[];
 extern struct testcase_t evtag_testcases[];
 extern struct testcase_t evbuffer_testcases[];

@@ -495,6 +495,7 @@ end:
 		event_config_free(cfg);
 }
 
+static int subthread_pipe[2];
 static struct event time_events[5];
 static struct timeval times[5];
 static struct event_base *exit_base = NULL;
@@ -510,17 +511,30 @@ static THREAD_FN
 register_events_subthread(void *arg)
 {
 	struct timeval tv = {0,0};
+	char b = '\0';
+
+	/* handshake */
+	read(subthread_pipe[1], &b, 1);
+	write(subthread_pipe[1], &b, 1);
+	read(subthread_pipe[1], &b, 1);
+
 	SLEEP_MS(100);
-	event_active(&time_events[0], EV_TIMEOUT, 1);
+	write(subthread_pipe[1], &b, 1);
+	event_active(&time_events[0], EV_TIMEOUT, 1); /* 100/100 */
+	TT_BLATHER(("activating event[0]"));
 	SLEEP_MS(100);
-	event_active(&time_events[1], EV_TIMEOUT, 1);
+	event_active(&time_events[1], EV_TIMEOUT, 1); /* 200/100 */
+	TT_BLATHER(("activating event[1]"));
 	SLEEP_MS(100);
 	tv.tv_usec = 100*1000;
-	event_add(&time_events[2], &tv);
+	event_add(&time_events[2], &tv); /* 400/200 */
+	TT_BLATHER(("activating event[2]"));
 	tv.tv_usec = 150*1000;
-	event_add(&time_events[3], &tv);
+	event_add(&time_events[3], &tv); /* 450/250 */
+	TT_BLATHER(("activating event[3]"));
 	SLEEP_MS(200);
-	event_active(&time_events[4], EV_TIMEOUT, 1);
+	event_active(&time_events[4], EV_TIMEOUT, 1); /* 500/50 */
+	TT_BLATHER(("activating event[4]"));
 
 	THREAD_RETURN();
 }
@@ -532,21 +546,31 @@ thread_no_events(void *arg)
 	struct basic_test_data *data = arg;
 	struct timeval starttime, endtime;
 	int i;
+	char b = '\0';
 	exit_base = data->base;
 
-	memset(times,0,sizeof(times));
-	for (i=0;i<5;++i) {
+	memset(times, 0, sizeof(times));
+	for (i=0; i < ARRAY_SIZE(time_events); ++i) {
 		event_assign(&time_events[i], data->base,
 		    -1, 0, note_time_cb, &times[i]);
 	}
 
-	evutil_gettimeofday(&starttime, NULL);
+	tt_assert(evutil_socketpair(
+		AF_UNIX, SOCK_STREAM, 0, subthread_pipe) != -1);
+
 	THREAD_START(thread, register_events_subthread, data->base);
+	/* handshake */
+	write(subthread_pipe[0], &b, 1);
+	read(subthread_pipe[0], &b, 1);
+	write(subthread_pipe[0], &b, 1);
+
+	evutil_gettimeofday(&starttime, NULL);
 	event_base_loop(data->base, EVLOOP_NO_EXIT_ON_EMPTY);
 	evutil_gettimeofday(&endtime, NULL);
 	tt_assert(event_base_got_break(data->base));
 	THREAD_JOIN(thread);
-	for (i=0; i<5; ++i) {
+
+	for (i = 0; i < ARRAY_SIZE(time_events); ++i) {
 		struct timeval diff;
 		double sec;
 		evutil_timersub(&times[i], &starttime, &diff);
@@ -554,11 +578,14 @@ thread_no_events(void *arg)
 		TT_BLATHER(("event %d at %.4f seconds", i, sec));
 	}
 	test_timeval_diff_eq(&starttime, &times[0], 100);
-	test_timeval_diff_eq(&starttime, &times[1], 200);
-	test_timeval_diff_eq(&starttime, &times[2], 400);
-	test_timeval_diff_eq(&starttime, &times[3], 450);
-	test_timeval_diff_eq(&starttime, &times[4], 500);
-	test_timeval_diff_eq(&starttime, &endtime,  500);
+	starttime = times[0];
+	test_timeval_diff_eq(&starttime, &times[1], 100);
+	starttime = times[1];
+	test_timeval_diff_eq(&starttime, &times[2], 200);
+	test_timeval_diff_eq(&starttime, &times[3], 250);
+	starttime = times[3];
+	test_timeval_diff_eq(&starttime, &times[4], 50);
+	test_timeval_diff_eq(&starttime, &endtime,  50);
 
 end:
 	;
