@@ -84,21 +84,11 @@ INPUT                  = \
         include/event2/util.h
 
 #---------------------------------------------------------------------------
-# configuration options related to the HTML output
+# configuration options related to the output
 #---------------------------------------------------------------------------
-
-# If the GENERATE_HTML tag is set to YES (the default) Doxygen will 
-# generate HTML output.
 
 GENERATE_HTML          = YES
-
-#---------------------------------------------------------------------------
-# configuration options related to the LaTeX output
-#---------------------------------------------------------------------------
-
-# If the GENERATE_LATEX tag is set to YES (the default) Doxygen will 
-# generate Latex output.
-
+GENERATE_XML           = YES
 GENERATE_LATEX         = YES
 
 # The LATEX_OUTPUT tag is used to specify where the LaTeX docs will be put. 
