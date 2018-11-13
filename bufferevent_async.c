@@ -188,6 +188,7 @@ bev_async_add_write(struct bufferevent_async *beva)
 	if (!beva->write_added) {
 		beva->write_added = 1;
 		event_base_add_virtual_(bev->ev_base);
+		BEV_RESET_GENERIC_WRITE_TIMEOUT(bev);
 	}
 }
 
@@ -355,8 +356,6 @@ be_async_enable(struct bufferevent *buf, short what)
 
 	if (what & EV_READ)
 		BEV_RESET_GENERIC_READ_TIMEOUT(buf);
-	if (what & EV_WRITE)
-		BEV_RESET_GENERIC_WRITE_TIMEOUT(buf);
 
 	/* If we newly enable reading or writing, and we aren't reading or
 	   writing already, consider launching a new read or write. */
@@ -521,7 +520,7 @@ write_complete(struct event_overlapped *eo, ev_uintptr_t key,
 
 	if (bev_a->ok) {
 		if (ok && nbytes) {
-			BEV_RESET_GENERIC_WRITE_TIMEOUT(bev);
+			BEV_DEL_GENERIC_WRITE_TIMEOUT(bev);
 			be_async_trigger_nolock(bev, EV_WRITE, 0);
 			bev_async_consider_writing(bev_a);
 		} else if (!ok) {
