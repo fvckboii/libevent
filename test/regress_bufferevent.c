@@ -919,18 +919,22 @@ bev_timeout_read_cb(struct bufferevent *bev, void *arg)
 {
 	struct timeout_cb_result *res = arg;
 	evutil_gettimeofday(&res->last_read_at, NULL);
+	TT_BLATHER(("%s: %p", __func__, bev));
 }
 static void
 bev_timeout_write_cb(struct bufferevent *bev, void *arg)
 {
 	struct timeout_cb_result *res = arg;
 	evutil_gettimeofday(&res->last_wrote_at, NULL);
+	TT_BLATHER(("%s: %p", __func__, bev));
 }
 static void
 bev_timeout_event_cb(struct bufferevent *bev, short what, void *arg)
 {
 	struct timeout_cb_result *res = arg;
 	++res->total_calls;
+	TT_BLATHER(("%s: bev=%p, total_calls=%i, what=%i",
+		__func__, bev, res->total_calls, what));
 
 	if ((what & (BEV_EVENT_READING|BEV_EVENT_TIMEOUT))
 	    == (BEV_EVENT_READING|BEV_EVENT_TIMEOUT)) {
