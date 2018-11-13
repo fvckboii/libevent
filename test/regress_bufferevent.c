@@ -1435,5 +1435,14 @@ struct testcase_t bufferevent_iocp_testcases[] = {
 	{ "bufferevent_connect_fail_eventcb",
 	  test_bufferevent_connect_fail_eventcb, TT_IOCP, &basic_setup, NULL },
 
+	{ "bufferevent_timeout", test_bufferevent_timeouts,
+	  TT_IOCP, &basic_setup, (void*)"" },
+	{ "bufferevent_timeout_pair", test_bufferevent_timeouts,
+	  TT_IOCP, &basic_setup, (void*)"pair" },
+	{ "bufferevent_timeout_filter", test_bufferevent_timeouts,
+	  TT_IOCP, &basic_setup, (void*)"filter" },
+	{ "bufferevent_timeout_filter_pair", test_bufferevent_timeouts,
+	  TT_IOCP, &basic_setup, (void*)"filter pair" },
+
 	END_OF_TESTCASES,
 };
