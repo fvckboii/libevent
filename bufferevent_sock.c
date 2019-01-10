@@ -288,6 +288,9 @@ bufferevent_writecb(evutil_socket_t fd, short event, void *arg)
 
 	if (bufev_p->write_suspended)
 		goto done;
+	/** Protection against event loop in another thread */
+	if (!(bufev->enabled & EV_WRITE))
+		goto done;
 
 	if (evbuffer_get_length(bufev->output)) {
 		evbuffer_unfreeze(bufev->output, 1);
