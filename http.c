@@ -168,6 +168,28 @@ fake_getnameinfo(const struct sockaddr *sa, size_t salen, char *host,
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #endif
 
+static int
+evhttp_connection_enable(struct evhttp_connection *evcon, short events)
+{
+	int err;
+
+	if (events & EV_READ)
+		evcon->readcb_called = 0;
+	if (events & EV_WRITE)
+		evcon->writecb_called = 0;
+
+	err = bufferevent_enable(evcon->bufev, events);
+	EVUTIL_ASSERT(err == 0);
+	usleep(100);
+
+	if (events & EV_READ)
+		EVUTIL_ASSERT(evcon->readcb_called == 0);
+	if (events & EV_WRITE)
+		EVUTIL_ASSERT(evcon->writecb_called == 0);
+
+	return err;
+}
+
 extern int debug;
 
 static evutil_socket_t bind_socket_ai(struct evutil_addrinfo *, int reuse);
@@ -377,7 +399,7 @@ evhttp_write_buffer(struct evhttp_connection *evcon,
 	    evhttp_error_cb,
 	    evcon);
 
-	bufferevent_enable(evcon->bufev, EV_READ|EV_WRITE);
+	evhttp_connection_enable(evcon, EV_READ|EV_WRITE);
 }
 
 static void
@@ -390,7 +412,7 @@ static void
 evhttp_send_continue(struct evhttp_connection *evcon,
 			struct evhttp_request *req)
 {
-	bufferevent_enable(evcon->bufev, EV_WRITE);
+	evhttp_connection_enable(evcon, EV_WRITE);
 	evbuffer_add_printf(bufferevent_get_output(evcon->bufev),
 			"HTTP/%d.%d 100 Continue\r\n\r\n",
 			req->major, req->minor);
@@ -792,6 +814,8 @@ evhttp_write_cb(struct bufferevent *bufev, void *arg)
 {
 	struct evhttp_connection *evcon = arg;
 
+	++evcon->writecb_called;
+
 	/* Activate our call back */
 	if (evcon->cb != NULL)
 		(*evcon->cb)(evcon, evcon->cb_arg);
@@ -1118,6 +1142,8 @@ evhttp_read_cb(struct bufferevent *bufev, void *arg)
 	struct evhttp_connection *evcon = arg;
 	struct evhttp_request *req = TAILQ_FIRST(&evcon->requests);
 
+	++evcon->readcb_called;
+
 	/* Cancel if it's pending. */
 	event_deferred_cb_cancel_(get_deferred_queue(evcon),
 	    &evcon->read_more_deferred_cb);
@@ -1361,7 +1387,7 @@ static void
 evhttp_connection_start_detectclose(struct evhttp_connection *evcon)
 {
 	evcon->flags |= EVHTTP_CON_CLOSEDETECT;
-	bufferevent_enable(evcon->bufev, EV_READ);
+	evhttp_connection_enable(evcon, EV_READ);
 }
 
 static void
@@ -1548,6 +1574,8 @@ evhttp_connection_cb(struct bufferevent *bufev, short what, void *arg)
 	struct evhttp_connection *evcon = arg;
 	int error;
 	ev_socklen_t errsz = sizeof(error);
+
+	++evcon->eventcb_called;
 
 	if (evcon->fd == -1)
 		evcon->fd = bufferevent_getfd(bufev);
@@ -2579,7 +2607,7 @@ evhttp_connection_connect_(struct evhttp_connection *evcon)
 		bufferevent_set_timeouts(evcon->bufev, &evcon->timeout, &evcon->timeout);
 	}
 	/* make sure that we get a write callback */
-	if (bufferevent_enable(evcon->bufev, EV_WRITE))
+	if (evhttp_connection_enable(evcon, EV_WRITE))
 		return (-1);
 
 	evcon->state = EVCON_CONNECTING;
@@ -2608,6 +2636,9 @@ evhttp_connection_connect_(struct evhttp_connection *evcon)
 		evhttp_connection_cb_cleanup(evcon);
 		return (0);
 	}
+
+	usleep(1000);
+	EVUTIL_ASSERT(evcon->eventcb_called == 0);
 
 	return (0);
 }
@@ -2709,7 +2740,7 @@ void
 evhttp_start_read_(struct evhttp_connection *evcon)
 {
 	bufferevent_disable(evcon->bufev, EV_WRITE);
-	bufferevent_enable(evcon->bufev, EV_READ);
+	evhttp_connection_enable(evcon, EV_READ);
 
 	evcon->state = EVCON_READING_FIRSTLINE;
 	/* Reset the bufferevent callbacks */
@@ -2731,7 +2762,7 @@ void
 evhttp_start_write_(struct evhttp_connection *evcon)
 {
 	bufferevent_disable(evcon->bufev, EV_WRITE);
-	bufferevent_enable(evcon->bufev, EV_READ);
+	evhttp_connection_enable(evcon, EV_READ);
 
 	evcon->state = EVCON_WRITING;
 	evhttp_write_buffer(evcon, evhttp_write_connectioncb, NULL);
@@ -4254,7 +4285,7 @@ evhttp_get_request_connection(
 
 	if (bufferevent_setfd(evcon->bufev, fd))
 		goto err;
-	if (bufferevent_enable(evcon->bufev, EV_READ))
+	if (evhttp_connection_enable(evcon, EV_READ))
 		goto err;
 	if (bufferevent_disable(evcon->bufev, EV_WRITE))
 		goto err;

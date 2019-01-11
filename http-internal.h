@@ -105,6 +105,10 @@ struct evhttp_connection {
 	struct event_base *base;
 	struct evdns_base *dns_base;
 	int ai_family;
+
+	int writecb_called;
+	int readcb_called;
+	int eventcb_called;
 };
 
 /* A callback for an http server */
