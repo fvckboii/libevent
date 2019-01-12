@@ -1205,6 +1205,9 @@ evhttp_read_body(struct evhttp_connection *evcon, struct evhttp_request *req)
 		evhttp_connection_done(evcon);
 		return;
 	}
+
+	/* Read more! */
+	bufferevent_enable(evcon->bufev, EV_READ);
 }
 
 #define get_deferred_queue(evcon)		\
