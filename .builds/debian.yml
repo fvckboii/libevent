@@ -1,0 +1,12 @@
+image: debian
+packages:
+- gcc
+- cmake
+- libssl-dev
+- ninja-build
+sources:
+- https://git.sr.ht/~azat/libevent
+tasks:
+- configure: cmake -G Ninja libevent
+- build: ninja
+- test: ninja verify
