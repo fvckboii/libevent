@@ -1469,7 +1469,7 @@ evhttp_connection_read_on_write_error(struct evhttp_connection *evcon,
 		event_deferred_cb_schedule_(get_deferred_queue(evcon),
 		    &evcon->read_more_deferred_cb);
 	} else {
-		evhttp_error_cb(evcon->bufev, BEV_EVENT_ERROR, evcon);
+		evhttp_start_read_(evcon);
 	}
 
 	evcon->flags |= EVHTTP_CON_READING_ERROR;
