@@ -1440,6 +1440,7 @@ evhttp_connection_read_on_write_error(struct evhttp_connection *evcon,
     struct evhttp_request *req)
 {
 	struct evbuffer *buf;
+	size_t in;
 
 	/** Second time, we can't read anything */
 	if (evcon->flags & EVHTTP_CON_READING_ERROR) {
@@ -1455,7 +1456,22 @@ evhttp_connection_read_on_write_error(struct evhttp_connection *evcon,
 	evbuffer_drain(buf, evbuffer_get_length(buf));
 	evbuffer_freeze(buf, 1);
 
-	evhttp_start_read_(evcon);
+	bufferevent_disable(evcon->bufev, EV_WRITE|EV_READ);
+	in = evbuffer_get_length(bufferevent_get_input(evcon->bufev));
+	if (in) {
+		bufferevent_setcb(evcon->bufev,
+		    evhttp_read_cb,
+		    evhttp_write_cb,
+		    evhttp_error_cb,
+		    evcon);
+
+		evcon->state = EVCON_READING_FIRSTLINE;
+		event_deferred_cb_schedule_(get_deferred_queue(evcon),
+		    &evcon->read_more_deferred_cb);
+	} else {
+		evhttp_error_cb(evcon->bufev, BEV_EVENT_ERROR, evcon);
+	}
+
 	evcon->flags |= EVHTTP_CON_READING_ERROR;
 }
 
