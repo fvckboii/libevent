@@ -1,0 +1,32 @@
+---
+format_version: 5
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+trigger_map:
+- push_branch: "*"
+  workflow: primary
+- pull_request_source_branch: "*"
+  workflow: primary
+workflows:
+  steps:
+  - git-clone: {}
+  - script:
+      deps:
+        apt_get:
+        - name: ninja-build
+      inputs:
+      - content: |-
+          set -e
+          set -x
+
+          mkdir libevent
+          cd libevent
+          cmake -d
+            -DCMAKE_TOOLCHAIN_FILE=/opt/android-ndk/build/cmake/android.toolchain.cmake
+            -DANDROID_TOOLCHAIN=gcc
+            -DEVENT__DISABLE_OPENSSL=ON
+            -G Ninja
+            /bitrise/src
+          ninja
+  meta:
+    bitrise.io:
+      stack: linux-docker-android
