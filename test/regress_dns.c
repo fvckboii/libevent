@@ -2352,6 +2352,93 @@ end:
 }
 #endif /* \EVTHREAD_USE_PTHREADS_IMPLEMENTED */
 
+static int tcp_server_requests;
+static void
+dns_tcp_server_cb(struct evdns_server_request *req, void *arg)
+{
+	/* first request is UDP,
+	 * reply with DNS_ERR_TRUNCATED to trigger second via TCP */
+	if (!(tcp_server_requests++ % 2)) {
+		tt_int_op(evdns_server_request_respond(req, DNS_ERR_TRUNCATED), ==, 0);
+	} else {
+		ev_uint32_t a = 0x7f000001;
+		evdns_server_request_add_a_reply(req, req->questions[0]->name, 1, &a, 0);
+		tt_int_op(evdns_server_request_respond(req, DNS_ERR_NONE), ==, 0);
+	}
+	return;
+
+ end:
+	event_base_loopexit(arg, NULL);
+}
+static void
+dns_tcp_test_cb(int result, char type, int count, int ttl,
+    void *addresses, void *arg)
+{
+	struct in_addr *in_addrs = addresses;
+
+	dns_ok = 0;
+	tt_int_op(result, ==, DNS_ERR_NONE);
+	tt_int_op(type, ==, DNS_IPv4_A);
+	tt_int_op(in_addrs[0].s_addr, ==, 0x7f000001);
+	dns_ok = 1;
+
+ end:
+	event_base_loopexit(arg, NULL);
+}
+static void
+dns_tcp_test(void *arg)
+{
+	struct basic_test_data *data = arg;
+	struct event_base *base;
+	struct evdns_base *dns_base = NULL;
+	struct evdns_server_port *server = NULL;
+	evutil_socket_t fd = -1;
+	struct sockaddr_in sin;
+	struct sockaddr_storage ss;
+	ev_socklen_t slen;
+
+	base = data->base;
+	dns_base = evdns_base_new(base, 0);
+
+	tt_assert(!evdns_base_set_option(dns_base, "attempts:", "0"));
+	tt_assert(!evdns_base_set_option(dns_base, "timeout:", "0.5"));
+	tt_assert(!evdns_base_set_option(dns_base, "use-tcp-on-truncated-reply:", "1"));
+
+	memset(&sin, 0, sizeof(sin));
+	sin.sin_family = AF_INET;
+	sin.sin_port = 0;
+	sin.sin_addr.s_addr = htonl(0x7f000001);
+	if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+		tt_abort_perror("socket");
+	evutil_make_socket_nonblocking(fd);
+	if (bind(fd, (struct sockaddr*)&sin, sizeof(sin)) < 0)
+		tt_abort_perror("bind");
+	server = evdns_add_server_port_with_base(base, fd, 0, dns_tcp_server_cb, base);
+
+	memset(&ss, 0, sizeof(ss));
+	slen = sizeof(ss);
+	if (getsockname(fd, (struct sockaddr*)&ss, &slen) < 0)
+		tt_abort_perror("getsockname");
+	evdns_base_nameserver_sockaddr_add(dns_base,
+	    (struct sockaddr*)&ss, slen, 0);
+
+	evdns_base_resolve_ipv4(dns_base, "example.com", 0, dns_tcp_test_cb, base);
+
+	event_base_dispatch(base);
+
+	tt_int_op(dns_ok, ==, 1);
+	tt_int_op(tcp_server_requests, ==, 2);
+
+end:
+	if (dns_base)
+		evdns_base_free(dns_base, 1);
+	if (server)
+		evdns_close_server_port(server);
+	if (fd >= 0)
+		evutil_closesocket(fd);
+}
+
+
 #define DNS_LEGACY(name, flags)					       \
 	{ #name, run_legacy_test_fn, flags|TT_LEGACY, &legacy_setup,   \
 		    dns_##name }
@@ -2420,6 +2507,8 @@ struct testcase_t dns_testcases[] = {
 	  getaddrinfo_race_gotresolve_test,
 	  TT_FORK|TT_OFF_BY_DEFAULT, NULL, NULL },
 #endif
+
+	{ "tcp", dns_tcp_test, TT_FORK|TT_NEED_BASE, &basic_setup, NULL },
 
 	END_OF_TESTCASES
 };
