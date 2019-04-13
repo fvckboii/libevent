@@ -2063,7 +2063,7 @@ test_dbg_leak_shutdown(void *env_)
 	event_base_free(env->base);
 	env->base = 0;
 }
-#endif
+#endif /* \EVENT_SET_MEM_FUNCTIONS_IMPLEMENTED */
 
 static void
 test_getaddrinfo_async_cancel_stress(void *ptr)
@@ -2350,7 +2350,7 @@ end:
 	event_base_loopbreak(rp.base);
 	event_base_free(rp.base);
 }
-#endif
+#endif /* \EVTHREAD_USE_PTHREADS_IMPLEMENTED */
 
 #define DNS_LEGACY(name, flags)					       \
 	{ #name, run_legacy_test_fn, flags|TT_LEGACY, &legacy_setup,   \
