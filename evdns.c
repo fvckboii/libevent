@@ -1918,14 +1918,18 @@ evdns_server_request_format_response(struct server_request *req, int err)
 	u16 t_;
 	u32 t32_;
 	int i;
-	u16 flags;
+	u16 flags = 0;
 	struct dnslabel_table table;
 
+	if (err == DNS_ERR_TRUNCATED) {
+		flags |= _TC_MASK;
+		err = 0;
+	}
 	if (err < 0 || err > 15) return -1;
 
 	/* Set response bit and error code; copy OPCODE and RD fields from
 	 * question; copy RA and AA if set by caller. */
-	flags = req->base.flags;
+	flags |= req->base.flags;
 	flags |= (_QR_MASK | err);
 
 	dnslabel_table_init(&table);
