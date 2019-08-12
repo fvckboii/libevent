@@ -684,8 +684,6 @@ bufferevent_base_set(struct event_base *base, struct bufferevent *bufev)
 	int res = -1;
 
 	BEV_LOCK(bufev);
-	if (!BEV_IS_SOCKET(bufev))
-		goto done;
 
 	bufev->ev_base = base;
 
