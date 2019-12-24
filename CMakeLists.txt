@@ -848,14 +848,21 @@ if (NOT EVENT__DISABLE_OPENSSL)
 
     set(EVENT__HAVE_OPENSSL 1)
 
-    message(STATUS "OpenSSL include: ${OPENSSL_INCLUDE_DIR}")
-    message(STATUS "OpenSSL lib: ${OPENSSL_LIBRARIES}")
+    if ((TARGET OpenSSL::SSL) AND (TARGET OpenSSL::Crypto))
+        set(LIBEVENT_OPENSSL_LIBRARIES OpenSSL::SSL OpenSSL::Crypto)
+        message(STATUS "OpenSSL include: IMPORTED")
+    else()
+        include_directories(${OPENSSL_INCLUDE_DIR})
 
-    include_directories(${OPENSSL_INCLUDE_DIR})
+        set(LIBEVENT_OPENSSL_LIBRARIES ${OPENSSL_LIBRARIES})
+        message(STATUS "OpenSSL include: ${OPENSSL_INCLUDE_DIR}")
+    endif()
+
+    message(STATUS "OpenSSL lib: ${LIBEVENT_OPENSSL_LIBRARIES}")
 
     list(APPEND SRC_OPENSSL bufferevent_openssl.c)
     list(APPEND HDR_PUBLIC include/event2/bufferevent_ssl.h)
-    list(APPEND LIB_APPS ${OPENSSL_LIBRARIES})
+    list(APPEND LIB_APPS ${LIBEVENT_OPENSSL_LIBRARIES})
 endif()
 
 if (NOT EVENT__DISABLE_THREAD_SUPPORT)
@@ -959,7 +966,7 @@ if (NOT EVENT__DISABLE_OPENSSL)
     add_event_library(event_openssl
         INNER_LIBRARIES event_core
         OUTER_INCLUDES ${OPENSSL_INCLUDE_DIR}
-        LIBRARIES ${OPENSSL_LIBRARIES}
+        LIBRARIES ${LIBEVENT_OPENSSL_LIBRARIES}
         SOURCES ${SRC_OPENSSL})
 endif()
 
