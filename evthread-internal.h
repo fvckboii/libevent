@@ -93,14 +93,14 @@ extern int evthread_lock_debugging_enabled_;
 #define EVLOCK_LOCK(lockvar,mode)					\
 	do {								\
 		if (lockvar)						\
-			evthread_lock_fns_.lock(mode, lockvar);		\
+			EVUTIL_ASSERT(!evthread_lock_fns_.lock(mode, lockvar));		\
 	} while (0)
 
 /** Release a lock */
 #define EVLOCK_UNLOCK(lockvar,mode)					\
 	do {								\
 		if (lockvar)						\
-			evthread_lock_fns_.unlock(mode, lockvar);	\
+			EVUTIL_ASSERT(!evthread_lock_fns_.unlock(mode, lockvar));	\
 	} while (0)
 
 /** Helper: put lockvar1 and lockvar2 into pointerwise ascending order. */
@@ -226,14 +226,14 @@ int evthreadimpl_locking_enabled_(void);
 #define EVLOCK_LOCK(lockvar,mode)					\
 	do {								\
 		if (lockvar)						\
-			evthreadimpl_lock_lock_(mode, lockvar);		\
+			EVUTIL_ASSERT(!evthreadimpl_lock_lock_(mode, lockvar));		\
 	} while (0)
 
 /** Release a lock */
 #define EVLOCK_UNLOCK(lockvar,mode)					\
 	do {								\
 		if (lockvar)						\
-			evthreadimpl_lock_unlock_(mode, lockvar);	\
+			EVUTIL_ASSERT(!evthreadimpl_lock_unlock_(mode, lockvar));	\
 	} while (0)
 
 /** Lock an event_base, if it is set up for locking.  Acquires the lock
