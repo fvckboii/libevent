@@ -138,7 +138,7 @@ regress_make_tmpfile(const void *data, size_t datalen, char **filename_out)
 	}
 	lseek(fd, 0, SEEK_SET);
 	/* remove it from the file system */
-	unlink(tmpfilename);
+	//unlink(tmpfilename);
 	return (fd);
 #else
 	/* XXXX actually delete the file later */
