@@ -85,9 +85,9 @@ static void
 wake_one_timeout(evutil_socket_t fd, short what, void *arg)
 {
 	struct cond_wait *cw = arg;
-	EVLOCK_LOCK(cw->lock, 0);
+	//EVLOCK_LOCK(cw->lock, 0);
 	EVTHREAD_COND_SIGNAL(cw->cond);
-	EVLOCK_UNLOCK(cw->lock, 0);
+	//EVLOCK_UNLOCK(cw->lock, 0);
 }
 
 #define NUM_THREADS	100
