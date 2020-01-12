@@ -157,6 +157,7 @@ evthread_posix_cond_wait(void *cond_, void *lock_, const struct timeval *tv)
 			return 0;
 	} else {
 		r = pthread_cond_wait(cond, lock);
+		EVUTIL_ASSERT(!r);
 		return r ? -1 : 0;
 	}
 }
