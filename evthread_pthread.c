@@ -158,7 +158,7 @@ evthread_posix_cond_wait(void *cond_, void *lock_, const struct timeval *tv)
 	} else {
 		r = pthread_cond_wait(cond, lock);
 		if (r)
-			event_errx(1, "pthread_cond_wait returns %i", r);
+			event_err(1, "pthread_cond_wait returns %i", r);
 		return r ? -1 : 0;
 	}
 }

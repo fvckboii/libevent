@@ -94,7 +94,7 @@ extern int evthread_lock_debugging_enabled_;
 	do {								\
 		if (lockvar) {						\
 			int err = evthread_lock_fns_.lock(mode, lockvar); \
-			if (err) event_errx(1, "lock failed %i", err); \
+			if (err) event_err(1, "lock failed %i", err); \
 		} \
 	} while (0)
 
@@ -103,7 +103,7 @@ extern int evthread_lock_debugging_enabled_;
 	do {								\
 		if (lockvar) {						\
 			int err = evthread_lock_fns_.unlock(mode, lockvar); \
-			if (err) event_errx(1, "unlock failed %i", err); \
+			if (err) event_err(1, "unlock failed %i", err); \
 		} \
 	} while (0)
 
@@ -231,7 +231,7 @@ int evthreadimpl_locking_enabled_(void);
 	do {								\
 		if (lockvar) {						\
 			int err = evthreadimpl_lock_lock_(mode, lockvar); \
-			if (err) event_errx(1, "lock failed %i", err); \
+			if (err) event_err(1, "lock failed %i", err); \
 		} \
 	} while (0)
 
@@ -240,7 +240,7 @@ int evthreadimpl_locking_enabled_(void);
 	do {								\
 		if (lockvar) {						\
 			int err = evthreadimpl_lock_unlock_(mode, lockvar); \
-			if (err) event_errx(1, "unlock failed %i", err); \
+			if (err) event_err(1, "unlock failed %i", err); \
 		} \
 	} while (0)
 
