@@ -92,15 +92,19 @@ extern int evthread_lock_debugging_enabled_;
 /** Acquire a lock. */
 #define EVLOCK_LOCK(lockvar,mode)					\
 	do {								\
-		if (lockvar)						\
-			EVUTIL_ASSERT(!evthread_lock_fns_.lock(mode, lockvar));		\
+		if (lockvar) {						\
+			int err = evthread_lock_fns_.lock(mode, lockvar); \
+			if (err) event_errx(1, "lock failed %i", err); \
+		} \
 	} while (0)
 
 /** Release a lock */
 #define EVLOCK_UNLOCK(lockvar,mode)					\
 	do {								\
-		if (lockvar)						\
-			EVUTIL_ASSERT(!evthread_lock_fns_.unlock(mode, lockvar));	\
+		if (lockvar) {						\
+			int err = evthread_lock_fns_.unlock(mode, lockvar); \
+			if (err) event_errx(1, "unlock failed %i", err); \
+		} \
 	} while (0)
 
 /** Helper: put lockvar1 and lockvar2 into pointerwise ascending order. */
@@ -225,15 +229,19 @@ int evthreadimpl_locking_enabled_(void);
 /** Acquire a lock. */
 #define EVLOCK_LOCK(lockvar,mode)					\
 	do {								\
-		if (lockvar)						\
-			EVUTIL_ASSERT(!evthreadimpl_lock_lock_(mode, lockvar));		\
+		if (lockvar) {						\
+			int err = evthreadimpl_lock_lock_(mode, lockvar); \
+			if (err) event_errx(1, "lock failed %i", err); \
+		} \
 	} while (0)
 
 /** Release a lock */
 #define EVLOCK_UNLOCK(lockvar,mode)					\
 	do {								\
-		if (lockvar)						\
-			EVUTIL_ASSERT(!evthreadimpl_lock_unlock_(mode, lockvar));	\
+		if (lockvar) {						\
+			int err = evthreadimpl_lock_unlock_(mode, lockvar); \
+			if (err) event_errx(1, "unlock failed %i", err); \
+		} \
 	} while (0)
 
 /** Lock an event_base, if it is set up for locking.  Acquires the lock
