@@ -3171,6 +3171,19 @@ event_deferred_cb_schedule_(struct event_base *base, struct event_callback *cb)
 	return r;
 }
 
+int
+event_deferred_cb_scheduled_(struct event_base *base, struct event_callback *cb)
+{
+	int r;
+	if (!base)
+		base = current_base;
+	/* XXX: Locking just in case, but I guess it is unnecessary */
+	EVBASE_ACQUIRE_LOCK(base, th_base_lock);
+	r = (cb->evcb_flags & (EVLIST_ACTIVE|EVLIST_ACTIVE_LATER));
+	EVBASE_RELEASE_LOCK(base, th_base_lock);
+	return r;
+}
+
 static int
 timeout_next(struct event_base *base, struct timeval **tv_p)
 {

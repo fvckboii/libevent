@@ -64,6 +64,13 @@ void event_deferred_cb_cancel_(struct event_base *, struct event_callback *);
  */
 EVENT2_EXPORT_SYMBOL
 int event_deferred_cb_schedule_(struct event_base *, struct event_callback *);
+/**
+   Check if the callback is scheduled already
+
+   Return true if it *was* previously scheduled.
+ */
+EVENT2_EXPORT_SYMBOL
+int event_deferred_cb_scheduled_(struct event_base *, struct event_callback *);
 
 #ifdef __cplusplus
 }
