@@ -487,7 +487,15 @@ epoll_dispatch(struct event_base *base, struct timeval *tv)
 			continue;
 #endif
 
-		if (what & EPOLLERR) {
+		/**
+		 * We check for EPOLLPRI, since epoll will return EPOLLERR|EPOLLPRI in
+		 * case of sysfs polling:
+		 *   https://elixir.bootlin.com/linux/v5.7-rc1/source/fs/kernfs/file.c#L820
+		 *
+		 * EPOLLPRI has also other cases (like out-of-band tcp packet), but it
+		 * should not have EPOLLERR set.
+		 */
+		if ((what & EPOLLERR) && !(what & EPOLLPRI)) {
 			ev = EV_READ | EV_WRITE;
 		} else if ((what & EPOLLHUP) && !(what & EPOLLRDHUP)) {
 			ev = EV_READ | EV_WRITE;

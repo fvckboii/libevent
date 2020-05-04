@@ -2945,6 +2945,44 @@ end:
 	}
 }
 
+#ifdef __linux__
+static void
+test_linux_poll_sysfs(void *arg)
+{
+	struct event *e = NULL;
+	struct basic_test_data *data = (struct basic_test_data *)arg;
+	short got = 0;
+	int fd = -1;
+	int pair[2] = { };
+
+	fd = open("/sys/class/net/lo/statistics/tx_bytes", O_RDONLY);
+	if (fd < 0)
+		tt_skip();
+
+	e = event_new(data->base, fd, EV_READ, record_event_cb, &got);
+	tt_assert(e);
+	tt_assert(!event_add(e, NULL));
+
+	// trigger packets of loopback interface
+	// (regular socketpair() does not support AF_INET, hence evutil_ersatz_socketpair_)
+	tt_assert(!evutil_ersatz_socketpair_(AF_INET, SOCK_STREAM, 0, pair));
+	tt_int_op(write(pair[0], "foo", 3), ==, 3);
+
+	tt_int_op(event_base_loop(data->base, EVLOOP_NONBLOCK), ==, 1);
+	tt_int_op(got, ==, EV_READ);
+
+end:
+	if (fd != -1)
+		close(fd);
+	if (e)
+		event_free(e);
+	if (pair[0])
+		close(pair[0]);
+	if (pair[1])
+		close(pair[1]);
+}
+#endif // \__linux__
+
 #ifndef _WIN32
 /* You can't do this test on windows, since dup2 doesn't work on sockets */
 
@@ -3556,6 +3594,11 @@ struct testcase_t main_testcases[] = {
 	  NULL },
 	{ "event_closed_fd_poll", test_event_closed_fd_poll, TT_ISOLATED, &basic_setup,
 	  NULL },
+
+#ifdef __linux__
+	{ "linux_poll_sysfs", test_linux_poll_sysfs,
+	  TT_FORK|TT_NEED_BASE, &basic_setup, NULL },
+#endif
 
 #ifndef _WIN32
 	{ "dup_fd", test_dup_fd, TT_ISOLATED, &basic_setup, NULL },
