@@ -833,16 +833,20 @@ evutil_v6addr_is_local_(const struct in6_addr *in)
 static void
 evutil_found_ifaddr(const struct sockaddr *sa)
 {
+	char buf[128];
+
 	if (sa->sa_family == AF_INET) {
 		const struct sockaddr_in *sin = (struct sockaddr_in *)sa;
+		evutil_inet_ntop(AF_INET, &sin->sin_addr, buf, sizeof(buf));
 		if (!evutil_v4addr_is_local_(&sin->sin_addr)) {
-			event_debug(("Detected an IPv4 interface"));
+			event_debug(("Detected an IPv4 interface: %s", buf));
 			had_ipv4_address = 1;
 		}
 	} else if (sa->sa_family == AF_INET6) {
 		const struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)sa;
+		evutil_inet_ntop(AF_INET6, &sin6->sin6_addr, buf, sizeof(buf));
 		if (!evutil_v6addr_is_local_(&sin6->sin6_addr)) {
-			event_debug(("Detected an IPv6 interface"));
+			event_debug(("Detected an IPv6 interface: %s", buf));
 			had_ipv6_address = 1;
 		}
 	}
