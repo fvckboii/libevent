@@ -87,6 +87,8 @@ struct bufferevent_async {
 	unsigned ok : 1;
 	unsigned read_added : 1;
 	unsigned write_added : 1;
+	unsigned read_pending : 1;
+	unsigned write_pending : 1;
 };
 
 const struct bufferevent_ops bufferevent_ops_async = {
@@ -362,10 +364,20 @@ be_async_enable(struct bufferevent *buf, short what)
 	/* If we newly enable reading or writing, and we aren't reading or
 	   writing already, consider launching a new read or write. */
 
-	if (what & EV_READ)
+	if (what & EV_READ) {
+		if (bev_async->read_pending == 1) {
+			be_async_trigger_nolock(buf, EV_READ, 0);
+			bev_async->read_pending = 0;
+		}
 		bev_async_consider_reading(bev_async);
-	if (what & EV_WRITE)
+	}
+	if (what & EV_WRITE) {
+		if (bev_async->write_pending == 1) {
+			be_async_trigger_nolock(buf, EV_WRITE, 0);
+			bev_async->read_pending = 0;
+		}
 		bev_async_consider_writing(bev_async);
+	}
 	return 0;
 }
 
@@ -480,7 +492,11 @@ read_complete(struct event_overlapped *eo, ev_uintptr_t key,
 	if (bev_a->ok) {
 		if (ok && nbytes) {
 			BEV_RESET_GENERIC_READ_TIMEOUT(bev);
-			be_async_trigger_nolock(bev, EV_READ, 0);
+			/* Activate EV_READ only if it still enabled */
+			if (bev_a->read_added == 1)
+				be_async_trigger_nolock(bev, EV_READ, 0);
+			else
+				bev_a->read_pending = 1;
 			bev_async_consider_reading(bev_a);
 		} else if (!ok) {
 			what |= BEV_EVENT_ERROR;
@@ -523,7 +539,11 @@ write_complete(struct event_overlapped *eo, ev_uintptr_t key,
 	if (bev_a->ok) {
 		if (ok && nbytes) {
 			BEV_RESET_GENERIC_WRITE_TIMEOUT(bev);
-			be_async_trigger_nolock(bev, EV_WRITE, 0);
+			/* Activate EV_WRITE only if it still enabled */
+			if (bev_a->write_added == 1)
+				be_async_trigger_nolock(bev, EV_WRITE, 0);
+			else
+				bev_a->write_pending = 1;
 			bev_async_consider_writing(bev_a);
 		} else if (!ok) {
 			what |= BEV_EVENT_ERROR;
