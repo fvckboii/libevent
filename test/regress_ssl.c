@@ -174,7 +174,7 @@ respond_to_number(struct bufferevent *bev, void *ctx)
 	type = (enum regress_openssl_type)ctx;
 
 	line = evbuffer_readln(b, NULL, EVBUFFER_EOL_LF);
-	if (! line)
+	if (!line)
 		return;
 	n = atoi(line);
 	if (n <= 0)
@@ -190,12 +190,32 @@ respond_to_number(struct bufferevent *bev, void *ctx)
 		SSL_renegotiate(bufferevent_ssl_get_ssl(bev));
 	}
 	++n;
-	evbuffer_add_printf(bufferevent_get_output(bev),
-	    "%d\n", n);
+	evbuffer_add_printf(bufferevent_get_output(bev), "%d\n", n);
+#if 1
+	{
+		SSL *ssl = bufferevent_openssl_get_ssl(bev);
+		struct evbuffer *output = bufferevent_get_output(bev);
+		size_t len = evbuffer_get_length(output);
+		evbuffer_unfreeze(output, 1);
+		unsigned char *data = evbuffer_pullup(output, len);
+#if 0
+		size_t wrote = SSL_write(ssl, data, len);
+#else
+		size_t wrote = evbuffer_write(output, bufferevent_getfd(bev));
+#endif
+		if (wrote > 0) {
+			int ret = evbuffer_drain(output, wrote);
+			tt_int_op(ret, ==, 0);
+		}
+		evbuffer_freeze(output, 1);
+	}
+#endif
 	TT_BLATHER(("Done reading; now writing."));
 	bufferevent_enable(bev, EV_WRITE);
 	// we shouldn't disable EV_READ here, otherwise we wouldn't got close cb
 	// bufferevent_disable(bev, EV_READ);
+end:
+	;
 }
 
 static void
