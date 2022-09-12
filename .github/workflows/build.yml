@@ -1010,7 +1010,7 @@ jobs:
         if: failure()
         with:
           name: openbsd-${{ matrix.release }}-cmake-${{ matrix.EVENT_MATRIX }}-build
-          path: build
+          path: .
 
   openbsd-autotools-job:
     runs-on: macos-12
@@ -1097,5 +1097,5 @@ jobs:
         if: failure()
         with:
           name: openbsd-${{ matrix.release }}-autotools-${{ matrix.EVENT_MATRIX }}-build
-          path: build
+          path: .
           
